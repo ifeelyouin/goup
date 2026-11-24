@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}GoUp{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='goup.css') }}">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="{{ url_for('home') }}">GoUp</a>
+    <nav aria-label="Main navigation">
+      <a href="{{ url_for('home') }}" {% if request.endpoint == 'home' %}aria-current="page"{% endif %}>Home</a>
+      <a href="{{ url_for('plan') }}" {% if request.endpoint in ('plan', 'workout') %}aria-current="page"{% endif %}>Workout</a>
+      <a href="{{ url_for('stats') }}" {% if request.endpoint == 'stats' %}aria-current="page"{% endif %}>Stats</a>
+      <a href="{{ url_for('ranks') }}" {% if request.endpoint == 'ranks' %}aria-current="page"{% endif %}>Ranking</a>
+    </nav>
+  </header>
+  <main>
+    {% for message in get_flashed_messages() %}<p class="notice" role="status">{{ message }}</p>{% endfor %}
+    {% block main %}{% endblock %}
+  </main>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,48 +1,67 @@
 # GoUp
 
-GoUp is a Python app for logging workouts and tracking weekly training by muscle group, exercise tiers, and consistency.
+GoUp is a local Python app for logging workouts and tracking game-style training stats. It calculates 18 muscle stats across six groups, tracks completed workouts, and unlocks tiers through lift tests.
 
-## Getting Started
+## Run the app
 
-GoUp was tested with Python 3.13 and Streamlit 1.67.0. Run these commands in PowerShell from the project folder.
+Run these commands in PowerShell from the project folder. Python 3.13 was used for development and testing.
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
-.\.venv\Scripts\python.exe -m streamlit run app.py
+.\.venv\Scripts\python.exe app.py
 ```
 
-Open [GoUp](http://localhost:8501) in your browser. The app creates `data/goup.sqlite3` on first launch and stores workouts there.
+Open [GoUp](http://127.0.0.1:5000) in your browser. Create a profile and enter the loads you have lifted for at least three reps. The app saves your profile, workouts, routines, and current draft in `data/goup_data.json`. If the JSON file is missing, the app imports the earlier SQLite workout history once and leaves the SQLite file intact.
 
-## Demo Walkthrough
+## Presentation demo
 
-Start with an empty workout history.
+Use a separate demo file so the sample workouts stay separate from your own records.
 
-1. Log a bench press for today with **40 kg, 8 reps, and 3 sets**.
-2. Find the entry under **Workout History** and check that **This Week** shows **3 sets** and **960 kg × reps** for Chest. GoUp also counts these sets toward Triceps.
-3. Check that the Bench Press tier advances from **Iron to Bronze**.
-4. Check that the consistency score rises to **8 / 100**. Multiple workouts on one date count as one training day.
-5. Restart the app and check that your workout is still in the history.
+```powershell
+.\.venv\Scripts\python.exe -m goup.seed --path data/goup_demo.json
+.\.venv\Scripts\python.exe app.py --data data/goup_demo.json
+```
 
-## How GoUp Calculates Progress
+For a rebuild of the same demo file, add `--force` to the seed command. It keeps a timestamped copy of the previous file.
 
-- **Weekly training** runs from Monday through Sunday. The chart shows set counts for the current week and the previous three weeks. GoUp credits the sets and training volume to each muscle group associated with the exercise.
-- **Exercise tiers** start at Iron and depend on the highest weight logged for that exercise. The table shows GoUp's game thresholds.
-- **Consistency** is the number of distinct training days in the last 28 days, including today, divided by the 12-day goal and expressed as a percentage. The score is rounded to the nearest whole number and capped at 100.
+1. Open **Home**. The seeded lifter is **75 kg**, has **44 workouts across 16 weeks**, and starts the demo with **Legs 40.8, Silver II** and a previous squat record of **90 kg**.
+2. Open **Workout** and start the **Legs and Core** routine. Set the first squat to **92.5 kg × 3** and check it off. GoUp displays **Passed** and starts the rest timer.
+3. Check off the two remaining squat sets and one calf raise set. Finish the workout. The result shows **Legs promoted from Silver to Gold**, a new personal record, and **40.8 to 50.1** for the Legs stat.
+4. Open **Stats** to see the stat history and the four-week **Sets** or **Volume** chart. Open **Ranking** to show the local demo ranking with sample lifters.
 
-| Exercise | Bronze | Silver | Gold | Master |
-| --- | ---: | ---: | ---: | ---: |
-| Bench Press | 40 kg | 60 kg | 80 kg | 100 kg |
-| Squat | 50 kg | 80 kg | 110 kg | 140 kg |
-| Deadlift | 60 kg | 100 kg | 130 kg | 160 kg |
+## How the rules work
 
-## Project Structure
+- **Growth** applies to sets with at least five reps and at least 60% of the best logged weight for that exercise. Main, helper, and minor muscles receive credit factors of 1.0, 0.5, and 0.25. The rule multiplies the remaining gap to 100 by 0.0011 and the remaining factors shown on the slides.
+- **Recovery** starts at 30% and reaches 100% in 48 hours for Chest, Shoulders, Arms, and Core or in 72 hours for Back and Legs. Speed is 1.0 in this version, and the training-age factor halves per complete year since sign-up. The first ten effective sets per muscle per week get full credit, sets 11–20 get 30%, and later sets get zero growth credit.
+- **Time off** begins to reduce a muscle's stat after a 14-day grace period. Each full week beyond that point multiplies the stat by 0.98, down to a floor of 80% of its peak.
+- **Promotion** uses a body-weight multiplier and rounds the target up to the next 2.5 kg increment. A set of at least three reps at the target unlocks the next tier and raises each muscle in the group to at least that tier's starting stat. Core advances through game stats.
+- **Consistency** counts distinct training days in the last 28 days and caps a 12-day goal at 100 points. The growth factor is `1 + score / 500`, using the score before the workout.
+- **Volume** adds weight × reps across the logged sets. **Completed week comparison** uses the two most recent full Monday–Sunday weeks. An earlier volume of zero displays **No baseline yet**.
+- **Ranking** uses sample profiles in the local app. Your profile joins after four distinct training weeks, and the screen supports district, everyone, same tier, and consistency views.
 
-- `app.py` turns the inputs from **Log a Workout** into a `Workout` object and displays the results.
-- `storage.py` saves and reads `Workout` objects. `WorkoutStore.save()` commits the new record to the SQLite file.
-- `training.py` contains the calculations. `weekly_training()` adds sets and volume by week and muscle group. `exercise_tiers()` checks each exercise's best lift against its tier thresholds. `consistency()` uses a set of dates to count each training day once.
+The growth figures are simulated game stats computed from workout records. A physiological validation study would require its own measurements and evaluation.
+
+## Project structure
+
+- `app.py` starts the local server. `goup/web.py` handles the Flask pages and forms.
+- `goup/models.py` validates inputs. `goup/storage.py` reads and writes the local JSON file.
+- `goup/data.py` defines the exercise catalog, tier thresholds, and sample lifters. `goup/engine.py` replays the raw workouts in order and calculates the stats.
+- `goup/charts.py` makes PNG charts with Matplotlib. `goup/seed.py` creates the presentation demo data.
+
+## Tests
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+.\.venv\Scripts\python.exe -m pytest -q
+```
+
+The tests cover the promotion and growth boundaries, JSON and SQLite compatibility, the workout screens, chart output, and the complete presentation demo.
+
+All 50 tests passed. Replaying the 44 sample workouts took a median of 7.13 ms over 20 runs on the development computer. This measures the Python engine without chart rendering.
 
 ## Libraries
 
-- The browser interface and charts use [Streamlit](https://docs.streamlit.io/).
-- The local database uses [Python's sqlite3 module](https://docs.python.org/3/library/sqlite3.html).
+- [Flask](https://flask.palletsprojects.com/) serves the local web pages.
+- [Matplotlib](https://matplotlib.org/) creates the charts.
+- [pytest](https://docs.pytest.org/) runs the project tests.

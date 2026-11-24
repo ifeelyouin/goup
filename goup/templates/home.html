@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block main %}
+{% if profile is none %}
+  <h1>Your training in GoUp</h1>
+  <p>Log your sets, follow training trends, and unlock tiers with lift tests.</p>
+  <a class="button" href="{{ url_for('signup') }}">Set up your profile</a>
+{% else %}
+  <div class="heading">
+    <h1>Home</h1>
+    <a class="button" href="{{ url_for('plan') }}">{{ 'Resume workout' if active else 'Plan workout' }}</a>
+  </div>
+  <p class="muted">{{ profile.name }} · {{ profile.body_weight | round(1) }} kg · {{ profile.district }}</p>
+  <div class="overview">
+    <section class="panel">
+      <h2>Overall stat</h2>
+      <strong class="big">{{ '%.1f' | format(state.overall_stat()) }}</strong>
+      <p>{{ state.overall_tier() }}</p>
+    </section>
+    <section class="panel">
+      <h2>Consistency</h2>
+      <strong class="big">{{ score }}<small> / 100</small></strong>
+      <p>{{ days }} of 12 training days in the last 28 days</p>
+    </section>
+  </div>
+  <h2>Muscle groups</h2>
+  <div class="table-scroll"><table>
+    <thead><tr><th>Group</th><th>Stat</th><th>Tier</th><th>Recovery estimate</th></tr></thead>
+    <tbody>{% for group in groups %}
+      <tr><td>{{ group.name }}</td><td>{{ '%.1f' | format(group.stat) }}</td><td>{{ group.tier }}</td>
+        <td>{{ '%.0f' | format(group.recovery * 100) }}%</td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+  <h2>Next promotion tests</h2>
+  {% if tests %}
+  <div class="table-scroll"><table>
+    <thead><tr><th>Group</th><th>Next tier</th><th>Test</th><th>Best at 3+ reps</th></tr></thead>
+    <tbody>{% for test in tests %}
+      <tr><td>{{ test.group }}</td><td>{{ test.tier }}</td>
+        <td>{{ test.exercise }} {{ '%g' | format(test.load) }} kg × 3</td>
+        <td>{{ '%g' | format(test.best) ~ ' kg' if test.best else '—' }}</td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+  {% else %}<p>All lift tests passed.</p>{% endif %}
+  <div class="heading section"><h2>Workout history</h2><a href="{{ url_for('export') }}">Export CSV</a></div>
+  {% if workouts %}
+    <ul class="records">
+      {% for item in workouts %}
+      <li>
+        <a href="{{ url_for('result', identifier=item.id) }}">{{ item.started_at[:10] }}</a>
+        <span>{{ item.exercises | map(attribute='name') | join(', ') }}</span>
+        <form method="post" action="{{ url_for('edit_workout', identifier=item.id) }}">
+          <button class="quiet">Edit</button>
+        </form>
+      </li>
+      {% endfor %}
+    </ul>
+  {% else %}<p>Completed workouts will appear here.</p>{% endif %}
+  <details class="section" id="reset-local-data"{% if reset_error %} open{% endif %}>
+    <summary>Reset local data</summary>
+    <form method="post" action="{{ url_for('reset') }}">
+      <p>This clears the profile, routines, and workouts in the app. Export your workouts before resetting.</p>
+      <label>Type RESET to confirm
+        <input name="confirm" placeholder="RESET" required{% if reset_error %} aria-invalid="true" aria-describedby="reset-confirm-error"{% endif %}>
+      </label>
+      {% if reset_error %}
+      <p class="notice" id="reset-confirm-error" role="alert">Enter RESET in this field to clear your local data.</p>
+      {% endif %}
+      <button type="submit" class="secondary">Reset</button>
+    </form>
+  </details>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Stats · GoUp{% endblock %}
+{% block main %}
+<h1>Stats</h1>
+<section>
+  <h2>Muscle stats</h2>
+  <p class="muted">Game stats calculated from your logged training.</p>
+  <div class="table-scroll"><table>
+    <thead><tr><th>Group</th><th>Muscle</th><th>Stat</th></tr></thead>
+    <tbody>{% for group, muscles in groups.items() %}
+      {% for muscle in muscles %}<tr><td>{{ group }}</td><td>{{ muscle }}</td><td>{{ '%.1f' | format(state.stats[muscle]) }}</td></tr>{% endfor %}
+    {% endfor %}</tbody>
+  </table></div>
+</section>
+<section>
+  <h2>Stat history</h2>
+  <img class="chart" src="{{ url_for('chart', metric='history') }}" alt="Muscle group game stats after each completed workout">
+</section>
+<section>
+  <h2>Last 4 weeks</h2>
+  <nav class="filters" aria-label="Chart metric">
+    <a class="{{ 'selected' if metric == 'sets' }}" href="{{ url_for('stats', metric='sets') }}">Sets</a>
+    <a class="{{ 'selected' if metric == 'volume' }}" href="{{ url_for('stats', metric='volume') }}">Volume</a>
+  </nav>
+  <img class="chart" src="{{ url_for('chart', metric=metric) }}" alt="Weekly {{ metric }} by muscle group">
+</section>
+<section>
+  <h2>Completed week comparison</h2>
+  <p class="muted">Weeks starting {{ previous }} and {{ latest }}. Volume is the sum of weight × reps for each set.</p>
+  <div class="table-scroll"><table>
+    <thead><tr><th>Group</th><th>Previous volume</th><th>Latest volume</th><th>Change</th></tr></thead>
+    <tbody>{% for group, older, newer, change in comparison %}
+      <tr><td>{{ group }}</td><td>{{ '%.1f' | format(older) }}</td><td>{{ '%.1f' | format(newer) }}</td><td>{{ change }}</td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+</section>
+<section>
+  <h2>Personal records</h2>
+  {% if state.best_triples %}
+  <div class="table-scroll"><table>
+    <thead><tr><th>Exercise</th><th>Best weight for 3+ reps</th></tr></thead>
+    <tbody>{% for exercise, weight in state.best_triples | dictsort %}
+      <tr><td>{{ exercise }}</td><td>{{ '%g' | format(weight) }} kg</td></tr>
+    {% endfor %}</tbody>
+  </table></div>
+  {% else %}<p>Log a lift of at least 3 reps to earn a record.</p>{% endif %}
+</section>
+{% endblock %}
