@@ -23,10 +23,12 @@ Start with an empty workout history.
 3. Check that the Bench Press tier advances from **Iron to Bronze**.
 4. Check that the consistency score rises to **8 / 100**. Multiple workouts on one date count as one training day.
 5. Restart the app and check that your workout is still in the history.
+6. Log a bench press at **40 kg** in the earlier of the two completed weeks and at **50 kg** in the latest completed week, with **8 reps and 3 sets** each. Switch the chart from **Sets** to **Volume** and check that **Completed Week Comparison** shows a **+25.0%** change for Chest and Triceps.
 
 ## How GoUp Calculates Progress
 
-- **Weekly training** runs from Monday through Sunday. The chart shows set counts for the current week and the previous three weeks. GoUp credits the sets and training volume to each muscle group associated with the exercise.
+- **Weekly training** runs from Monday through Sunday. Use **Sets** or **Volume** to chart the current week and the previous three weeks. Training volume is weight × reps × sets. GoUp credits the sets and volume to each muscle group associated with the exercise.
+- **Volume change** compares the two most recent completed weeks. Subtract the earlier week's volume from the latest completed week's volume, divide by the earlier week's volume, and multiply by 100. If the earlier week's volume is zero, GoUp shows **No baseline yet**.
 - **Exercise tiers** start at Iron and depend on the highest weight logged for that exercise. The table shows GoUp's game thresholds.
 - **Consistency** is the number of distinct training days in the last 28 days, including today, divided by the 12-day goal and expressed as a percentage. The score is rounded to the nearest whole number and capped at 100.
 

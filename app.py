@@ -9,6 +9,7 @@ from training import (
     CONSISTENCY_GOAL,
     EXERCISES,
     MUSCLES,
+    TrainingWeek,
     Workout,
     consistency,
     exercise_tiers,
@@ -68,18 +69,27 @@ def show_weekly_training(workouts: list[Workout], today: date) -> None:
     st.header("Weekly Training by Muscle Group")
     weeks = weekly_training(workouts, today)
     current = weeks[-1]
-    chart_data = []
-    for week in weeks:
-        chart_row: dict[str, date | int] = {"Week Starting": week.start}
-        for muscle in MUSCLES:
-            chart_row[muscle] = week.muscles[muscle].sets
-        chart_data.append(chart_row)
 
     chart_column, summary_column = st.columns([3, 2], gap="large")
     with chart_column:
-        st.subheader("Sets Over the Last 4 Weeks")
+        st.subheader("Last 4 Weeks")
+        metric = st.radio("Chart metric", ["Sets", "Volume"], horizontal=True)
+        axis_label = "Sets"
+        if metric == "Volume":
+            axis_label = "Volume (kg × reps)"
+
+        chart_data = []
+        for week in weeks:
+            chart_row: dict[str, date | int | float] = {"Week Starting": week.start}
+            for muscle, training in week.muscles.items():
+                if metric == "Volume":
+                    chart_row[muscle] = training.volume
+                else:
+                    chart_row[muscle] = training.sets
+            chart_data.append(chart_row)
+
         st.line_chart(
-            chart_data, x="Week Starting", y=list(MUSCLES), y_label="Sets", height=260
+            chart_data, x="Week Starting", y=MUSCLES, y_label=axis_label, height=260
         )
     with summary_column:
         st.subheader("This Week")
@@ -94,6 +104,36 @@ def show_weekly_training(workouts: list[Workout], today: date) -> None:
             summary.append(row)
 
         st.dataframe(summary, hide_index=True, width="stretch")
+
+    # The list ends with the current week. The two weeks before it are complete.
+    show_volume_comparison(weeks[-3], weeks[-2])
+
+
+def show_volume_comparison(previous_week: TrainingWeek, latest_week: TrainingWeek) -> None:
+    st.subheader("Completed Week Comparison")
+    st.caption(
+        f"Previous week starts {previous_week.start:%Y-%m-%d} · "
+        f"Latest completed week starts {latest_week.start:%Y-%m-%d}"
+    )
+
+    rows = []
+    for muscle in MUSCLES:
+        previous_volume = previous_week.muscles[muscle].volume
+        latest_volume = latest_week.muscles[muscle].volume
+        change_text = "No baseline yet"
+        if previous_volume > 0:
+            change = (latest_volume - previous_volume) / previous_volume * 100
+            change_text = f"{change:+.1f}%"
+
+        row = {
+            "Muscle Group": muscle,
+            "Previous Volume (kg × reps)": previous_volume,
+            "Latest Volume (kg × reps)": latest_volume,
+            "Volume Change": change_text,
+        }
+        rows.append(row)
+
+    st.dataframe(rows, hide_index=True, width="stretch")
 
 
 def show_tiers(workouts: list[Workout]) -> None:
