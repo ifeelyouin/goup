@@ -45,6 +45,14 @@ section { margin-top: 16px; }
 .panel h2, .notice h2 { margin: 0 0 8px; }
 .overview p { margin-bottom: 0; }
 .notice { background: #e7f1ff; color: #123658; }
+.rest-timer {
+  position: sticky;
+  top: 8px;
+  z-index: 1;
+  display: flex;
+  justify-content: space-between;
+}
+.rest-timer strong { font-variant-numeric: tabular-nums; }
 .promotion strong { font-size: 1.45rem; }
 .big { font-size: 1.55rem; }
 .button, .secondary, .quiet {

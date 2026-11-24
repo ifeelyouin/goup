@@ -1,8 +1,9 @@
 import csv
+from datetime import timedelta
 from io import StringIO
 
 from goup.seed import demo_data
-from goup.storage import DataStore
+from goup.storage import DataStore, empty_data
 from goup.web import create_app
 
 
@@ -63,13 +64,43 @@ def test_workout_controls_add_reorder_uncheck_and_cancel(client, now):
     client.post("/workout", data={"action": "remove_set:1"})
     checked = client.post("/workout", data={"action": "check:0:0", "weight_0_0": "75", "reps_0_0": "5"},
                           follow_redirects=True)
-    assert 'data-rest-seconds="120"' in checked.text
+    assert 'id="rest-time">2:00</strong>' in checked.text
     assert "Uncheck Squat set 1" in checked.text
     client.post("/workout", data={"action": "uncheck:0:0"})
     refused = client.post("/workout", data={"action": "finish"}, follow_redirects=True)
     assert "Check off at least one set" in refused.text
     client.post("/workout", data={"action": "cancel"})
     assert "Completed workouts will appear here" in client.get("/").text
+
+
+def test_rest_timer_keeps_its_deadline_across_requests(tmp_path, now):
+    current_time = now
+    app = create_app(tmp_path / "timer.json", lambda: current_time)
+    app.testing = True
+    client = app.test_client()
+    signup(client)
+    ready = begin(client, now, ["Squat"])
+    assert "Check off a set to start the rest timer." in ready.text
+
+    started = client.post("/workout", data={"action": "check:0:0", "rest_0": "10"},
+                          follow_redirects=True)
+    deadline = int((now + timedelta(seconds=10)).timestamp() * 1000)
+    assert f'data-rest-until="{deadline}"' in started.text
+    assert 'id="rest-time">0:10</strong>' in started.text
+
+    current_time += timedelta(seconds=4)
+    retried = client.post("/workout", data={"action": "check:0:0"}, follow_redirects=True)
+    assert f'data-rest-until="{deadline}"' in retried.text
+    assert 'id="rest-time">0:06</strong>' in retried.text
+
+    current_time += timedelta(seconds=6)
+    completed = client.get("/workout")
+    assert 'id="rest-time">0:00</strong>' in completed.text
+    assert 'id="rest-label">Rest complete</span>' in completed.text
+
+    disabled = client.post("/workout", data={"action": "check:0:1", "rest_0": "0"},
+                           follow_redirects=True)
+    assert "data-rest-until" not in disabled.text
 
 
 def test_full_demo_and_edit_rebuild_promotion(now, tmp_path):
@@ -134,9 +165,24 @@ def test_export_contains_only_completed_sets(client, now):
     assert rows[0]["weight_kg"] == "75.0"
 
 
-def test_reset_requires_explicit_confirmation(client):
-    signup(client)
-    client.post("/reset", data={"confirm": "no"})
-    assert "Workout history" in client.get("/").text
-    client.post("/reset", data={"confirm": "RESET"})
-    assert "Set up your profile" in client.get("/").text
+def test_reset_requires_explicit_confirmation_and_opens_signup(now, tmp_path):
+    path = tmp_path / "reset.json"
+    store = DataStore(path)
+    original = demo_data(now)
+    original["active_workout"] = {"exercises": []}
+    store.write(original)
+    app = create_app(path, lambda: now)
+    app.testing = True
+    client = app.test_client()
+
+    rejected = client.post("/reset", data={"confirm": "no"}, follow_redirects=True)
+    assert rejected.history[0].location.endswith("#reset-local-data")
+    assert 'id="reset-local-data" open' in rejected.text
+    assert "Enter RESET in this field" in rejected.text
+    assert store.read() == original
+
+    accepted = client.post("/reset", data={"confirm": " reset "}, follow_redirects=True)
+    assert accepted.request.path == "/signup"
+    assert "Local data reset." in accepted.text
+    assert "Set up your profile" in accepted.text
+    assert store.read() == empty_data()

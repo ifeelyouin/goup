@@ -1,22 +1,26 @@
-const timer = document.querySelector("[data-rest-seconds]");
-const end = Date.now() + Number(timer.dataset.restSeconds) * 1000;
+const timer = document.querySelector("[data-rest-until]");
 
-function showTime() {
-  const remaining = Math.max(0, Math.ceil((end - Date.now()) / 1000));
-  const minutes = Math.floor(remaining / 60);
-  const seconds = String(remaining % 60).padStart(2, "0");
-  document.querySelector("#rest-time").textContent = minutes + ":" + seconds;
-  if (remaining === 0) {
-    timer.hidden = true;
-  }
-}
+if (timer) {
+  const end = Number(timer.dataset.restUntil);
+  const clock = document.querySelector("#rest-time");
+  const label = document.querySelector("#rest-label");
 
-if (!timer.hidden) {
-  showTime();
-  const interval = setInterval(() => {
-    showTime();
-    if (timer.hidden) {
-      clearInterval(interval);
+  function updateTimer() {
+    const remaining = Math.max(0, Math.ceil((end - Date.now()) / 1000));
+    const minutes = Math.floor(remaining / 60);
+    const seconds = String(remaining % 60).padStart(2, "0");
+    clock.textContent = minutes + ":" + seconds;
+    if (remaining === 0) {
+      label.textContent = "Rest complete";
     }
-  }, 250);
+    return remaining;
+  }
+
+  if (updateTimer() > 0) {
+    const interval = setInterval(() => {
+      if (updateTimer() === 0) {
+        clearInterval(interval);
+      }
+    }, 250);
+  }
 }

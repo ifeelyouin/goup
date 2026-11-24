@@ -4,6 +4,7 @@ import csv
 from datetime import datetime, timedelta
 from io import StringIO
 from json import JSONDecodeError
+from math import ceil
 from secrets import token_hex
 import sqlite3
 
@@ -122,7 +123,8 @@ def create_app(data_path=DEFAULT_PATH, clock=datetime.now):
         records = sorted(data["workouts"], key=lambda row: (row["started_at"], row["id"]), reverse=True)
         return render_template("home.html", profile=profile, state=state, days=days, score=score,
                                tests=tests, groups=groups, workouts=records,
-                               active=data["active_workout"] is not None)
+                               active=data["active_workout"] is not None,
+                               reset_error=request.args.get("reset_error") == "1")
 
     @app.route("/signup", methods=["GET", "POST"])
     def signup():
@@ -183,9 +185,11 @@ def create_app(data_path=DEFAULT_PATH, clock=datetime.now):
         if draft is None:
             return redirect(url_for("plan"))
         rest = 0
+        rest_until_ms = None
         if draft["rest_until"]:
             end = datetime.fromisoformat(draft["rest_until"])
-            rest = max(0, round((end - g.now).total_seconds()))
+            rest = max(0, ceil((end - g.now).total_seconds()))
+            rest_until_ms = int(end.timestamp() * 1000)
         identifier = draft.get("edit_id") or next_workout_id(g.data["workouts"])
         draft_order = (draft["started_at"], identifier)
         previous = [row for row in g.data["workouts"] if (row["started_at"], row["id"]) < draft_order]
@@ -196,7 +200,7 @@ def create_app(data_path=DEFAULT_PATH, clock=datetime.now):
             if test:
                 test["best"] = state.best_triples.get(test["exercise"], 0)
                 tests[test["exercise"]] = test
-        return render_template("workout.html", draft=draft, rest=rest,
+        return render_template("workout.html", draft=draft, rest=rest, rest_until_ms=rest_until_ms,
                                catalog=EXERCISES_BY_GROUP, tests=tests,
                                feedback=set_feedback(g.data, draft, g.now),
                                available=[name for name in EXERCISES if name not in {
@@ -241,10 +245,14 @@ def create_app(data_path=DEFAULT_PATH, clock=datetime.now):
                 draft["current"] = index
                 if action in ("check", "uncheck"):
                     set_index = integer_value(parts[2] if len(parts) > 2 else None, 0, len(sets) - 1, "set")
-                    sets[set_index]["checked"] = action == "check"
-                    if action == "check":
-                        end = g.now + timedelta(seconds=entries[index]["rest_seconds"])
-                        draft["rest_until"] = end.isoformat()
+                    lift = sets[set_index]
+                    if action == "check" and not lift["checked"]:
+                        rest_seconds = entries[index]["rest_seconds"]
+                        draft["rest_until"] = None
+                        if rest_seconds > 0:
+                            end = g.now + timedelta(seconds=rest_seconds)
+                            draft["rest_until"] = end.isoformat()
+                    lift["checked"] = action == "check"
                 elif action == "add_set":
                     sets.append(dict(sets[-1], checked=False))
                 elif action == "remove_set" and len(sets) > 1:
@@ -358,11 +366,11 @@ def create_app(data_path=DEFAULT_PATH, clock=datetime.now):
 
     @app.post("/reset")
     def reset():
-        if request.form.get("confirm") != "RESET":
-            flash("Type RESET to clear the local data.")
-            return redirect(url_for("home"))
+        confirmation = request.form.get("confirm", "").strip().upper()
+        if confirmation != "RESET":
+            return redirect(url_for("home", reset_error="1", _anchor="reset-local-data"))
         store.write(empty_data())
         flash("Local data reset.")
-        return redirect(url_for("home"))
+        return redirect(url_for("signup"))
 
     return app

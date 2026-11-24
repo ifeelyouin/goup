@@ -55,12 +55,17 @@
       {% endfor %}
     </ul>
   {% else %}<p>Completed workouts will appear here.</p>{% endif %}
-  <details class="section">
+  <details class="section" id="reset-local-data"{% if reset_error %} open{% endif %}>
     <summary>Reset local data</summary>
     <form method="post" action="{{ url_for('reset') }}">
       <p>This clears the profile, routines, and workouts in the app. Export your workouts before resetting.</p>
-      <label>Type RESET to confirm <input name="confirm" required></label>
-      <button class="secondary">Reset</button>
+      <label>Type RESET to confirm
+        <input name="confirm" placeholder="RESET" required{% if reset_error %} aria-invalid="true" aria-describedby="reset-confirm-error"{% endif %}>
+      </label>
+      {% if reset_error %}
+      <p class="notice" id="reset-confirm-error" role="alert">Enter RESET in this field to clear your local data.</p>
+      {% endif %}
+      <button type="submit" class="secondary">Reset</button>
     </form>
   </details>
 {% endif %}

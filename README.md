@@ -58,7 +58,7 @@ The growth figures are simulated game stats computed from workout records. A phy
 
 The tests cover the promotion and growth boundaries, JSON and SQLite compatibility, the workout screens, chart output, and the complete presentation demo.
 
-All 49 tests passed. Replaying the 44 sample workouts took a median of 7.13 ms over 20 runs on the development computer. This measures the Python engine without chart rendering.
+All 50 tests passed. Replaying the 44 sample workouts took a median of 7.13 ms over 20 runs on the development computer. This measures the Python engine without chart rendering.
 
 ## Libraries
 
