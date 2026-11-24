@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Ranking · GoUp{% endblock %}
+{% block main %}
+<h1>Ranking</h1>
+<p class="muted">Local demo rankings use sample lifters. Your profile joins after four weeks with workout records.</p>
+<nav class="filters" aria-label="Ranking scope">
+  {% for value, label in [('district', 'My district (' ~ district ~ ')'), ('all', 'Everyone'), ('tier', 'Same tier')] %}
+    <a class="{{ 'selected' if scope == value }}" href="{{ url_for('ranks', scope=value, metric=metric) }}">{{ label }}</a>
+  {% endfor %}
+</nav>
+<nav class="filters" aria-label="Ranking metric">
+  {% for value, label in [('stat', 'Overall stat'), ('consistency', 'Consistency')] %}
+    <a class="{{ 'selected' if metric == value }}" href="{{ url_for('ranks', scope=scope, metric=value) }}">{{ label }}</a>
+  {% endfor %}
+</nav>
+{% for row in rows %}
+  {% if row.get('self') %}<p class="notice">You are #{{ loop.index }} of {{ rows | length }}</p>{% endif %}
+{% endfor %}
+{% if rows %}
+<div class="table-scroll"><table>
+  <thead><tr><th>#</th><th>Lifter</th><th>{{ 'Overall stat' if metric == 'stat' else 'Consistency' }}</th></tr></thead>
+  <tbody>{% for row in rows %}
+    <tr {% if row.get('self') %}class="highlight"{% endif %}>
+      <td>{{ loop.index }}</td>
+      <td>{{ row.name }}{{ ' (you)' if row.get('self') }}<br><small>{{ row.tier }} · {{ row.district }}</small></td>
+      <td>{{ '%.1f' | format(row.stat) if metric == 'stat' else row.consistency }}</td>
+    </tr>
+  {% endfor %}</tbody>
+</table></div>
+{% else %}<p>There are no lifters in this view yet.</p>{% endif %}
+{% endblock %}

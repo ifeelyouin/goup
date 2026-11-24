@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Workout results · GoUp{% endblock %}
+{% block main %}
+<div class="heading"><h1>Workout results</h1><a href="{{ url_for('home') }}">Close</a></div>
+<p class="muted">{{ outcome.date.strftime('%Y-%m-%d') }} · {{ outcome.effective_sets }} effective sets</p>
+{% for promotion in outcome.promotions %}
+  <section class="notice promotion">
+    <h2>Promotion</h2>
+    <strong>{{ promotion.group }} · {{ promotion['from'] }} → {{ promotion.to }}</strong>
+    <p>The lift met the test for this tier. Each muscle in this group reached at least the new tier's starting stat.</p>
+  </section>
+{% endfor %}
+<div class="overview">
+  <section class="panel"><h2>Overall stat</h2><strong class="big">{{ '%.1f' | format(outcome.overall) }}</strong></section>
+  <section class="panel"><h2>Change</h2><strong class="big">{{ '%+.2f' | format(outcome.change) }}</strong></section>
+</div>
+<p class="muted">Consistency bonus {{ '%+.0f' | format(outcome.bonus * 100) }}% at the start of the workout</p>
+{% if outcome.records %}
+  <h2>New personal records</h2>
+  <ul class="records">
+    {% for record in outcome.records %}
+      <li><span>{{ record.exercise }}</span><strong>{{ '%g' | format(record.weight) }} kg × {{ record.reps }}</strong></li>
+    {% endfor %}
+  </ul>
+{% endif %}
+<h2>Muscle stat changes</h2>
+{% for group in groups %}
+  <section class="panel">
+    <h3>{{ group.name }} · {{ group.tier }}</h3>
+    <p class="muted">{{ '%.1f' | format(group.before) }} → {{ '%.1f' | format(group.after) }}</p>
+    <div class="table-scroll"><table>
+      <thead><tr><th>Muscle</th><th>Before</th><th>After</th><th>Change</th></tr></thead>
+      <tbody>{% for muscle in group.changes %}
+        <tr><td>{{ muscle.name }}</td><td>{{ '%.1f' | format(muscle.before) }}</td><td>{{ '%.1f' | format(muscle.after) }}</td>
+          <td>{{ '%+.2f' | format(muscle.after - muscle.before) }}</td></tr>
+      {% endfor %}</tbody>
+    </table></div>
+  </section>
+{% else %}<p>Muscle stats held steady for this workout.</p>{% endfor %}
+<a class="button section" href="{{ url_for('stats') }}">View stats</a>
+{% endblock %}

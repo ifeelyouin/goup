@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Workout · GoUp{% endblock %}
+{% block main %}
+<form method="post" action="{{ url_for('workout_action') }}">
+  <div class="heading">
+    <h1>{{ 'Edit workout' if draft.edit_id is defined else 'Workout' }}</h1>
+    <button class="quiet" type="submit" name="action" value="cancel" formnovalidate>Cancel draft</button>
+  </div>
+  <p class="muted">{{ draft.started_at[:10] }} · {{ draft.exercises | length }} exercises</p>
+  <p class="notice" data-rest-seconds="{{ rest }}" role="timer" {% if rest == 0 %}hidden{% endif %}>
+    Rest timer <strong id="rest-time"></strong>
+  </p>
+  {% for entry in draft.exercises %}
+    {% set exercise_index = loop.index0 %}
+    <details class="panel workout-item" {% if exercise_index == draft.current %}open{% endif %}>
+      <summary>{{ loop.index }}. {{ entry.name }}</summary>
+      {% if entry.name in tests %}
+        {% set test = tests[entry.name] %}
+        <p class="notice">{{ test.tier }} promotion test · {{ '%g' | format(test.load) }} kg × 3</p>
+        <p class="muted">Best at 3+ reps · {{ '%g' | format(test.best) ~ ' kg' if test.best else '—' }}</p>
+      {% endif %}
+      <label>Rest seconds <input type="number" name="rest_{{ exercise_index }}" min="0" max="3600" value="{{ entry.rest_seconds }}" required></label>
+      <div class="table-scroll"><table class="set-table">
+        <thead><tr><th>Set</th><th>kg</th><th>Reps</th><th>Status</th><th>Done</th></tr></thead>
+        <tbody>{% for lift in entry.sets %}
+          {% set set_index = loop.index0 %}
+          <tr>
+            <td>{{ loop.index }}</td>
+            <td><input type="number" name="weight_{{ exercise_index }}_{{ set_index }}" value="{{ lift.weight }}" min="0.01" max="1000" step="0.01" aria-label="{{ entry.name }} set {{ loop.index }} weight" required></td>
+            <td><input type="number" name="reps_{{ exercise_index }}_{{ set_index }}" value="{{ lift.reps }}" min="1" max="500" aria-label="{{ entry.name }} set {{ loop.index }} reps" required></td>
+            <td>{{ feedback.get((exercise_index, set_index), '—') }}</td>
+            <td><button class="{{ 'button' if lift.checked else 'secondary' }}" name="action" value="{{ 'uncheck' if lift.checked else 'check' }}:{{ exercise_index }}:{{ set_index }}" aria-label="{{ 'Uncheck' if lift.checked else 'Check' }} {{ entry.name }} set {{ loop.index }}">{{ '✓' if lift.checked else 'Check' }}</button></td>
+          </tr>
+        {% endfor %}</tbody>
+      </table></div>
+      <div class="actions">
+        <button class="quiet" name="action" value="add_set:{{ exercise_index }}">+ Add set</button>
+        {% if entry.sets | length > 1 %}<button class="quiet" name="action" value="remove_set:{{ exercise_index }}">Remove last set</button>{% endif %}
+        {% if not loop.first %}<button class="quiet" name="action" value="move_up:{{ exercise_index }}">Move up</button>{% endif %}
+        {% if not loop.last %}<button class="quiet" name="action" value="move_down:{{ exercise_index }}">Move down</button>{% endif %}
+      </div>
+      {% if not loop.last %}
+      <button class="secondary" name="action" value="next:{{ exercise_index }}">Next: {{ draft.exercises[exercise_index + 1].name }}</button>
+      {% endif %}
+    </details>
+  {% endfor %}
+  {% if available %}
+    <div class="actions section">
+      <label>Add exercise
+        <select name="new_exercise">{% for name in available %}<option>{{ name }}</option>{% endfor %}</select>
+      </label>
+      <button class="secondary" name="action" value="add_exercise">Add exercise</button>
+    </div>
+  {% endif %}
+  <button class="button section" name="action" value="finish">{{ 'Save changes' if draft.edit_id is defined else 'Finish workout' }}</button>
+</form>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='timer.js') }}" defer></script>{% endblock %}

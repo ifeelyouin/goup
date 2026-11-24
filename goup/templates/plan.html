@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Plan workout · GoUp{% endblock %}
+{% block main %}
+<h1>Plan workout</h1>
+<form method="post">
+  <label>Workout date <input type="date" name="day" value="{{ today }}" max="{{ today }}" required></label>
+  {% if routines %}
+    <h2>Saved routines</h2>
+    <ul class="records">
+    {% for routine in routines %}
+      <li><span><strong>{{ routine.name }}</strong><br>{{ routine.exercises | join(', ') }}</span>
+        <button class="secondary" name="action" value="routine:{{ loop.index0 }}">Start</button></li>
+    {% endfor %}
+    </ul>
+  {% endif %}
+  <h2>Choose body parts and exercises</h2>
+  {% for group, exercises in catalog.items() %}
+    <details class="panel">
+      <summary>{{ group }}</summary>
+      <label class="check"><input type="checkbox" name="groups" value="{{ group }}"> Include {{ group }}</label>
+      {% for exercise in exercises %}
+        <label class="check exercise-option"><input type="checkbox" name="exercises" value="{{ exercise }}"> {{ exercise }}</label>
+      {% endfor %}
+    </details>
+  {% endfor %}
+  <div class="actions section">
+    <button class="button" name="action" value="start">Start workout</button>
+  </div>
+  <div class="actions section">
+    <label>Routine name <input name="routine_name" maxlength="40"></label>
+    <button class="secondary" name="action" value="save">Save as routine</button>
+  </div>
+</form>
+{% endblock %}
